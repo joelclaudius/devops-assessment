@@ -25,7 +25,6 @@ db.sqlite3
 env/
 venv/
 ENV/
-
 # Node.js dependencies
 node_modules/
 npm-debug.log*
@@ -37,11 +36,50 @@ build/
 dist/
 *.egg-info/
 
-# React specific files
+# Vite specific
+.vite
+.vite/deps
+*.vite-cache
+
+# Log files
+*.log
+*.log.*
+
+# Coverage
+coverage/
+
+# Editor-specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*.bak
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
 *.cache
 *.next
 out/
-coverage/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# ESLint and Prettier
+.eslintcache
+.prettiercache
+
+# Debug and profiling tools
+*.trace
+*.profile
+
 
 # VSCode settings
 .vscode/
