@@ -1,0 +1,79 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Django stuff:
+*.log
+*.pot
+*.pyc
+*.pyo
+db.sqlite3
+*.sqlite3
+
+# Django migrations
+**/migrations/*
+!**/migrations/__init__.py
+
+# Environment variables
+.env
+
+# Virtual environment
+env/
+venv/
+ENV/
+
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+build/
+dist/
+*.egg-info/
+
+# React specific files
+*.cache
+*.next
+out/
+coverage/
+
+# VSCode settings
+.vscode/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# JetBrains IDEs
+.idea/
+
+# Coverage reports
+htmlcov/
+*.cover
+*.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.coveragerc
+
+# Docker
+*.env
+docker-compose.override.yml
+
+# Logs
+*.log
+logs/
+
+# Static files
+/static/
+staticfiles/
+media/
+
+# PIP file
+pip-log.txt
