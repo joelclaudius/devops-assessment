@@ -167,7 +167,7 @@ const AppLayout = () => {
         {/* Footer */}
         <footer className="bg-gray-100 dark:bg-slate-900 py-6 transition-all duration-300">
           <div className="container mx-auto text-center text-gray-600 dark:text-slate-400 text-sm">
-            © {new Date().getFullYear()} My Blog. All rights reserved.
+            © {new Date().getFullYear()} keDevs Blog. All rights reserved.
           </div>
         </footer>
       </div>
