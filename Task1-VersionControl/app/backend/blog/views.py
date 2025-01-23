@@ -2,10 +2,12 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import get_user_model
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, IsAuthenticatedOrReadOnly
 from .models import BlogPost
-from .serializers import BlogPostSerializer, RegistrationSerializer, LoginSerializer
+from .serializers import BlogPostSerializer, RegistrationSerializer, LoginSerializer, UserSerializer
 
+User = get_user_model()
 
 @api_view(['POST'])
 def register_view(request):
@@ -22,11 +24,18 @@ def login_view(request):
     if serializer.is_valid():
         user = serializer.context['user']
         refresh = RefreshToken.for_user(user)
+
+        # Serialize user details
+        user_serializer = UserSerializer(user)
+
         return Response({
             'refresh': str(refresh),
             'access': str(refresh.access_token),
+            'user': user_serializer.data,  # Include user details in the response
         })
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 @api_view(['GET'])

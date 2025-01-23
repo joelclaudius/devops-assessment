@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Link, Outlet, useOutlet } from "react-router-dom";
+import React, { useState, useEffect, useContext } from "react";
+import { Link, Outlet, useOutlet, useNavigate } from "react-router-dom";
 import {
   SunIcon,
   HomeIcon,
@@ -11,10 +11,14 @@ import {
   XIcon,
 } from "@heroicons/react/solid";
 
+import { AuthContext } from "../context/AuthContext";
+
 const AppLayout = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const outlet = useOutlet();
+  const navigate = useNavigate();
+  const { isAuthenticated, logout } = useContext(AuthContext);
 
   // Sync darkMode with local storage
   useEffect(() => {
@@ -50,34 +54,77 @@ const AppLayout = () => {
           keDevs
         </h2>
         <nav className="space-y-4">
-          <Link
-            to="/"
-            className="block text-white dark:text-slate-300 hover:bg-blue-700 dark:hover:bg-slate-700 rounded-md px-4 py-2 transition flex items-center space-x-2"
-          >
-            <HomeIcon className="h-5 w-5" />
-            <span>View Blogs</span>
-          </Link>
-          <Link
-            to="/create"
-            className="block text-white dark:text-slate-300 hover:bg-blue-700 dark:hover:bg-slate-700 rounded-md px-4 py-2 transition flex items-center space-x-2"
-          >
-            <DocumentAddIcon className="h-5 w-5" />
-            <span>Create Blog</span>
-          </Link>
-          <Link
-            to="/login"
-            className="block text-white dark:text-slate-300 hover:bg-blue-700 dark:hover:bg-slate-700 rounded-md px-4 py-2 transition flex items-center space-x-2"
-          >
-            <LoginIcon className="h-5 w-5" />
-            <span>Login / Logout</span>
-          </Link>
-          <Link
-            to="/signup"
-            className="block text-white dark:text-slate-300 hover:bg-blue-700 dark:hover:bg-slate-700 rounded-md px-4 py-2 transition flex items-center space-x-2"
-          >
-            <UserAddIcon className="h-5 w-5" />
-            <span>Signup</span>
-          </Link>
+          {isAuthenticated ? (
+            <>
+              <Link
+                to="/"
+                className={`block ${
+                  window.location.pathname === "/" ? "bg-blue-700 dark:bg-slate-700" : ""
+                } text-white dark:text-slate-300 hover:bg-blue-700 dark:hover:bg-slate-700 rounded-md px-4 py-2 transition flex items-center space-x-2`}
+              >
+                <HomeIcon className="h-5 w-5" />
+                <span>View Blogs</span>
+              </Link>
+              <Link
+                to="/create"
+                className={`block ${
+                  window.location.pathname === "/create" ? "bg-blue-700 dark:bg-slate-700" : ""
+                } text-white dark:text-slate-300 hover:bg-blue-700 dark:hover:bg-slate-700 rounded-md px-4 py-2 transition flex items-center space-x-2`}
+              >
+                <DocumentAddIcon className="h-5 w-5" />
+                <span>Create Blog</span>
+              </Link>
+              <button
+                onClick={() => {
+                  logout();
+                  navigate("/");
+                }}
+                className="block text-white dark:text-slate-300 hover:bg-blue-700 dark:hover:bg-slate-700 rounded-md px-4 py-2 transition flex items-center space-x-2 w-full text-left"
+              >
+                <LoginIcon className="h-5 w-5" />
+                <span>Logout</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/"
+                className={`block ${
+                  window.location.pathname === "/" ? "bg-blue-700 dark:bg-slate-700" : ""
+                } text-white dark:text-slate-300 hover:bg-blue-700 dark:hover:bg-slate-700 rounded-md px-4 py-2 transition flex items-center space-x-2`}
+              >
+                <HomeIcon className="h-5 w-5" />
+                <span>View Blogs</span>
+              </Link>
+              <Link
+                to="/create"
+                className={`block ${
+                  window.location.pathname === "/create" ? "bg-blue-700 dark:bg-slate-700" : ""
+                } text-white dark:text-slate-300 hover:bg-blue-700 dark:hover:bg-slate-700 rounded-md px-4 py-2 transition flex items-center space-x-2`}
+              >
+                <DocumentAddIcon className="h-5 w-5" />
+                <span>Create Blog</span>
+              </Link>
+              <Link
+                to="/login"
+                className={`block ${
+                  window.location.pathname === "/login" ? "bg-blue-700 dark:bg-slate-700" : ""
+                } text-white dark:text-slate-300 hover:bg-blue-700 dark:hover:bg-slate-700 rounded-md px-4 py-2 transition flex items-center space-x-2`}
+              >
+                <LoginIcon className="h-5 w-5" />
+                <span>Login</span>
+              </Link>
+              <Link
+                to="/signup"
+                className={`block ${
+                  window.location.pathname === "/signup" ? "bg-blue-700 dark:bg-slate-700" : ""
+                } text-white dark:text-slate-300 hover:bg-blue-700 dark:hover:bg-slate-700 rounded-md px-4 py-2 transition flex items-center space-x-2`}
+              >
+                <UserAddIcon className="h-5 w-5" />
+                <span>Signup</span>
+              </Link>
+            </>
+          )}
         </nav>
       </aside>
 
@@ -130,39 +177,69 @@ const AppLayout = () => {
         <div className="absolute top-0 left-0 w-full h-screen bg-gray-50 dark:bg-slate-800 flex flex-col justify-center items-center space-y-6 md:hidden z-50 overflow-y-auto">
           <button
             onClick={toggleMenu}
-            className="absolute top-5 right-5 w-10 h-10 bg-white text-gray-800 rounded-full shadow-md hover:bg-gray-100 dark:bg-slate-700 dark:text-slate-300 transition duration-200"
+            className="absolute top-5 right-5 w-10 h-10 bg-white text-gray-800 rounded-full shadow-md hover:bg-gray-100 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 transition duration-200"
             aria-label="Close Menu"
           >
             <XIcon className="h-5 w-5" />
           </button>
-          <Link
-            to="/"
-            onClick={toggleMenu}
-            className="text-gray-800 dark:text-slate-300 text-lg hover:text-gray-600 dark:hover:text-slate-400 transition duration-200"
-          >
-            View Blogs
-          </Link>
-          <Link
-            to="/create"
-            onClick={toggleMenu}
-            className="text-gray-800 dark:text-slate-300 text-lg hover:text-gray-600 dark:hover:text-slate-400 transition duration-200"
-          >
-            Create Blog
-          </Link>
-          <Link
-            to="/login"
-            onClick={toggleMenu}
-            className="text-gray-800 dark:text-slate-300 text-lg hover:text-gray-600 dark:hover:text-slate-400 transition duration-200"
-          >
-            Login / Logout
-          </Link>
-          <Link
-            to="/signup"
-            onClick={toggleMenu}
-            className="text-gray-800 dark:text-slate-300 text-lg hover:text-gray-600 dark:hover:text-slate-400 transition duration-200"
-          >
-            Signup
-          </Link>
+          {isAuthenticated ? (
+            <>
+              <Link
+                to="/"
+                onClick={toggleMenu}
+                className="text-gray-800 dark:text-slate-300 text-lg hover:text-gray-600 dark:hover:text-slate-400 transition duration-200"
+              >
+                View Blogs
+              </Link>
+              <Link
+                to="/create"
+                onClick={toggleMenu}
+                className="text-gray-800 dark:text-slate-300 text-lg hover:text-gray-600 dark:hover:text-slate-400 transition duration-200"
+              >
+                Create Blog
+              </Link>
+              <button
+                onClick={() => {
+                  logout();
+                  navigate("/");
+                }}
+                className="text-gray-800 dark:text-slate-300 text-lg hover:text-gray-600 dark:hover:text-slate-400 transition duration-200"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/"
+                onClick={toggleMenu}
+                className="text-gray-800 dark:text-slate-300 text-lg hover:text-gray-600 dark:hover:text-slate-400 transition duration-200"
+              >
+                View Blogs
+              </Link>
+              <Link
+                to="/create"
+                onClick={toggleMenu}
+                className="text-gray-800 dark:text-slate-300 text-lg hover:text-gray-600 dark:hover:text-slate-400 transition duration-200"
+              >
+                Create Blog
+              </Link>
+              <Link
+                to="/login"
+                onClick={toggleMenu}
+                className="text-gray-800 dark:text-slate-300 text-lg hover:text-gray-600 dark:hover:text-slate-400 transition duration-200"
+              >
+                Login
+              </Link>
+              <Link
+                to="/signup"
+                onClick={toggleMenu}
+                className="text-gray-800 dark:text-slate-300 text-lg hover:text-gray-600 dark:hover:text-slate-400 transition duration-200"
+              >
+                Signup
+              </Link>
+            </>
+          )}
         </div>
       )}
     </div>

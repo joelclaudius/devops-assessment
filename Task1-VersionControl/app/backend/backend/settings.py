@@ -41,7 +41,14 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.AllowAny',  # Allow unauthenticated access for register and login
     ),
-    'DEFAULT_TOKEN_LIFETIME': timedelta(hours=6),
+}
+
+# Update SIMPLE_JWT settings to set token expiration
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=12),  # Set token expiration to 12 hours
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),   # Optional: Set refresh token lifetime (default is 7 days)
+    'ROTATE_REFRESH_TOKENS': False,               # Optional: Control if refresh tokens should be rotated
+    'BLACKLIST_AFTER_ROTATION': True,             # Optional: Blacklist old tokens after rotation
 }
 
 

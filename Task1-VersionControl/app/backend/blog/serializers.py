@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
 from .models import BlogPost
 
+User = get_user_model()
 
 
 class RegistrationSerializer(serializers.ModelSerializer):
@@ -35,6 +36,14 @@ class LoginSerializer(serializers.Serializer):
         self.context['user'] = user
         return data
 
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'is_staff','is_superuser']
+
+        
 class BlogPostSerializer(serializers.ModelSerializer):
     author = serializers.StringRelatedField()  # Use username instead of the whole CustomUser object
 
