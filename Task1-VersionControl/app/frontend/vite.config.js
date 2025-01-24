@@ -6,6 +6,6 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: true, // Allows external connections
-    allowedHosts: ['.ngrok-free.app', 'localhost'], // Specify domain patterns or add the specific domains
+    allowedHosts: ['.ngrok-free.app', 'localhost', 'blogs.kedevs.com'], // Specify domain patterns or add the specific domains
   },
 });
