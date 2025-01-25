@@ -2,7 +2,7 @@ import axios from "axios";
 
 const axiosInstance = axios.create({
   // baseURL: "https://betex-international.com/api",
-  baseURL: "https://blogs.kedevs.com/api/",
+  baseURL: "http://blogs.kedevs.com/api/",
   headers: {
     "Content-Type": "application/json",
   },
