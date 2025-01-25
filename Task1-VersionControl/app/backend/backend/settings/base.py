@@ -1,24 +1,19 @@
+import os
 from pathlib import Path
 from datetime import timedelta
-import os
-
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-weg@9km^6ixj7t5lmq0y7yd7@8lbpn0*8=w8po6)8%al$yl25b'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-default')  # Default for local dev but should be set in .env in production
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['*']
-
-
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
 # Application definition
 
@@ -30,7 +25,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'corsheaders',  
+    'corsheaders',
     'blog',
     'rest_framework_simplejwt',
 ]
@@ -46,12 +41,11 @@ REST_FRAMEWORK = {
 
 # Update SIMPLE_JWT settings to set token expiration
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=12),  # Set token expiration to 12 hours
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),   # Optional: Set refresh token lifetime (default is 7 days)
-    'ROTATE_REFRESH_TOKENS': False,               # Optional: Control if refresh tokens should be rotated
-    'BLACKLIST_AFTER_ROTATION': True,             # Optional: Blacklist old tokens after rotation
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=12),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
 }
-
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -67,7 +61,6 @@ MIDDLEWARE = [
 CORS_ALLOW_ALL_ORIGINS = True
 
 AUTH_USER_MODEL = "blog.CustomUser"
-
 
 ROOT_URLCONF = 'backend.urls'
 
@@ -89,23 +82,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
-# Default database connection
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',  # Use PostgreSQL database backend
-        'NAME': os.getenv('DB_NAME', 'postgres'),  # Use the environment variable for the database name
-        'USER': os.getenv('DB_USER', 'postgres'),  # Use the environment variable for the database user
-        'PASSWORD': os.getenv('DB_PASSWORD', 'examplepassword'),  # Use the environment variable for the database password
-        'HOST': os.getenv('DB_HOST', 'database'),  # Use the name of the database container from docker-compose.yml
-        'PORT': os.getenv('DB_PORT', '5432'),  # Default PostgreSQL port
-    }
-}
-
-
-
 # Password validation
-# https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -121,25 +98,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
-# Internationalization
-# https://docs.djangoproject.com/en/5.1/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
-
 STATIC_URL = 'static/'
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

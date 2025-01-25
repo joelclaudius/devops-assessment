@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # Frontend Service (Vite app served by Nginx)
+  frontend:
+    build:
+      context: ./frontend  # Path to the frontend Dockerfile
+      dockerfile: Dockerfile  # Explicitly specify the Dockerfile for the frontend
+    volumes:
+      - ./frontend:/app  # Mount the frontend code to allow live code updates during development
+    ports:
+      - "80:80"   # Expose port 80 for HTTP traffic
+      # - "443:443" # Uncomment for HTTPS traffic if SSL is configured
+    environment:
+      - NODE_ENV=production  # Set the environment to production for optimized builds
+      - VITE_API_URL=${VITE_API_URL}  # Load the backend API URL from the .env file
+    depends_on:
+      - backend  # Ensure the backend is available before frontend starts
+    env_file:
+      - .env  # Load environment variables from the .env file
+    networks:
+      - my_network  # Connect to the custom network for inter-service communication
+
+  # Backend Service (Django with Gunicorn)
+  backend:
+    build:
+      context: ./backend  # Path to the backend Dockerfile
+      dockerfile: Dockerfile  # Explicitly specify the Dockerfile for the backend
+    volumes:
+      - ./backend:/app  # Mount the backend code to allow live code updates during development
+    ports:
+      - "8000:8000"  # Expose port 8000 for Django API traffic
+    environment:
+      - DJANGO_SETTINGS_MODULE=backend.settings.prod  # Point to the production Django settings
+      - DATABASE_URL=postgres://postgres:${DB_PASSWORD}@db:5432/${DB_NAME}  # Database connection URL using .env credentials
+    depends_on:
+      - db  # Ensure the database service is up before the backend starts
+    command: ["bash", "gunicorn_start.sh"]  # Use a custom script to start Gunicorn for production
+    env_file:
+      - .env  # Load environment variables from the .env file
+    networks:
+      - my_network  # Connect to the custom network for inter-service communication
+
+  # Database Service (PostgreSQL)
+  db:
+    image: postgres:13  # Use the official PostgreSQL Docker image
+    environment:
+      - POSTGRES_USER=${DB_USER}  # Database username from .env file
+      - POSTGRES_PASSWORD=${DB_PASSWORD}  # Database password from .env file
+      - POSTGRES_DB=${DB_NAME}  # Database name from .env file
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Persist database data across container restarts
+    ports:
+      - "5432:5432"  # Expose port 5432 for PostgreSQL access
+    env_file:
+      - .env  # Load environment variables for the database from the .env file
+    networks:
+      - my_network  # Connect to the custom network for inter-service communication
+
+# Volumes for persistent storage
+volumes:
+  postgres_data:  # Volume to persist PostgreSQL data
+
+# Networks for isolated inter-service communication
+networks:
+  my_network:  # Custom network that allows backend, frontend, and database to communicate securely
+    driver: bridge  # Use the default bridge driver for network isolation
