@@ -1,0 +1,25 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+*.terraform/
+crash.log
+*.tfvars
+*.tfvars.json
+*.swp
+*.swo
+
+# Local overrides (if using a local file for configuration)
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# .terraform directories
+.terraform/
+
+# Lock files
+.terraform.lock.hcl
+
+# AWS credentials and sensitive files
+.aws/credentials
+.aws/config
