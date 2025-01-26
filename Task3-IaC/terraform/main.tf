@@ -1,8 +1,3 @@
-# Load provider
-module "provider" {
-  source = "./provider"
-}
-
 # Create VPC and networking
 module "vpc" {
   source = "./modules/vpc"
