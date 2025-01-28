@@ -27,3 +27,31 @@ override.tf.json
 
 remoting
 workspace
+*/workspace
+caches
+.env
+workspace
+# Ignore logs and temporary files
+*.log
+*.tmp
+*.pid
+*.swp
+# Ignore system files
+.DS_Store
+Thumbs.db
+# Ignore IDE and editor settings
+.vscode/
+.idea/
+*.iml
+
+# Ignore cache and build files
+caches/
+workspace/
+*.class
+*.out
+*.o
+# Ignore Jenkins files and temporary directories
+agent.jar
+remoting/
+
+Task4-CI-CD-Pipeline/workspace/
