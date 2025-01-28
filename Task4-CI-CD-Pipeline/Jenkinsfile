@@ -28,7 +28,11 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/joelclaudius/devops-assessment.git'
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: 'main']],
+                    userRemoteConfigs: [[url: 'https://github.com/joelclaudius/devops-assessment.git']]
+                ])
             }
         }
 
@@ -36,16 +40,23 @@ pipeline {
             steps {
                 dir('Task1-VersionControl/app/backend') {
                     script {
-                        sh """
-                            docker build --build-arg SECRET_KEY=${SECRET_KEY} --build-arg AWS_REGION=${AWS_REGION} \
-                                --build-arg FRONTEND_ECR_URL=${FRONTEND_ECR_URL} --build-arg BACKEND_ECR_URL=${BACKEND_ECR_URL} \
-                                --build-arg DATABASE_ECR_URL=${DATABASE_ECR_URL} --build-arg ECS_CLUSTER_NAME=${ECS_CLUSTER_NAME} \
-                                --build-arg DB_PASSWORD=${DB_PASSWORD} --build-arg DB_USER=${DB_USER} \
-                                --build-arg DB_NAME=${DB_NAME} --build-arg AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
-                                --build-arg ALLOWED_HOSTS=${ALLOWED_HOSTS} --build-arg DB_HOST=${DB_HOST} \
+                        sh '''
+                            docker build \
+                                --build-arg SECRET_KEY=${SECRET_KEY} \
+                                --build-arg AWS_REGION=${AWS_REGION} \
+                                --build-arg FRONTEND_ECR_URL=${FRONTEND_ECR_URL} \
+                                --build-arg BACKEND_ECR_URL=${BACKEND_ECR_URL} \
+                                --build-arg DATABASE_ECR_URL=${DATABASE_ECR_URL} \
+                                --build-arg ECS_CLUSTER_NAME=${ECS_CLUSTER_NAME} \
+                                --build-arg DB_PASSWORD=${DB_PASSWORD} \
+                                --build-arg DB_USER=${DB_USER} \
+                                --build-arg DB_NAME=${DB_NAME} \
+                                --build-arg AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+                                --build-arg ALLOWED_HOSTS=${ALLOWED_HOSTS} \
+                                --build-arg DB_HOST=${DB_HOST} \
                                 --build-arg AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
                                 -t ${BACKEND_ECR_URL}:latest .
-                        """
+                        '''
                     }
                 }
             }
@@ -55,15 +66,21 @@ pipeline {
             steps {
                 dir('Task1-VersionControl/app/frontend') {
                     script {
-                        sh """
-                            docker build --build-arg SECRET_KEY=${SECRET_KEY} --build-arg AWS_REGION=${AWS_REGION} \
-                                --build-arg FRONTEND_ECR_URL=${FRONTEND_ECR_URL} --build-arg BACKEND_ECR_URL=${BACKEND_ECR_URL} \
-                                --build-arg DATABASE_ECR_URL=${DATABASE_ECR_URL} --build-arg ECS_CLUSTER_NAME=${ECS_CLUSTER_NAME} \
-                                --build-arg DB_PASSWORD=${DB_PASSWORD} --build-arg DB_USER=${DB_USER} \
-                                --build-arg DB_NAME=${DB_NAME} --build-arg AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+                        sh '''
+                            docker build \
+                                --build-arg SECRET_KEY=${SECRET_KEY} \
+                                --build-arg AWS_REGION=${AWS_REGION} \
+                                --build-arg FRONTEND_ECR_URL=${FRONTEND_ECR_URL} \
+                                --build-arg BACKEND_ECR_URL=${BACKEND_ECR_URL} \
+                                --build-arg DATABASE_ECR_URL=${DATABASE_ECR_URL} \
+                                --build-arg ECS_CLUSTER_NAME=${ECS_CLUSTER_NAME} \
+                                --build-arg DB_PASSWORD=${DB_PASSWORD} \
+                                --build-arg DB_USER=${DB_USER} \
+                                --build-arg DB_NAME=${DB_NAME} \
+                                --build-arg AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
                                 --build-arg AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
                                 -t ${FRONTEND_ECR_URL}:latest .
-                        """
+                        '''
                     }
                 }
             }
@@ -73,15 +90,21 @@ pipeline {
             steps {
                 dir('Task1-VersionControl/app/database') {
                     script {
-                        sh """
-                            docker build --build-arg SECRET_KEY=${SECRET_KEY} --build-arg AWS_REGION=${AWS_REGION} \
-                                --build-arg FRONTEND_ECR_URL=${FRONTEND_ECR_URL} --build-arg BACKEND_ECR_URL=${BACKEND_ECR_URL} \
-                                --build-arg DATABASE_ECR_URL=${DATABASE_ECR_URL} --build-arg ECS_CLUSTER_NAME=${ECS_CLUSTER_NAME} \
-                                --build-arg DB_PASSWORD=${DB_PASSWORD} --build-arg DB_USER=${DB_USER} \
-                                --build-arg DB_NAME=${DB_NAME} --build-arg AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+                        sh '''
+                            docker build \
+                                --build-arg SECRET_KEY=${SECRET_KEY} \
+                                --build-arg AWS_REGION=${AWS_REGION} \
+                                --build-arg FRONTEND_ECR_URL=${FRONTEND_ECR_URL} \
+                                --build-arg BACKEND_ECR_URL=${BACKEND_ECR_URL} \
+                                --build-arg DATABASE_ECR_URL=${DATABASE_ECR_URL} \
+                                --build-arg ECS_CLUSTER_NAME=${ECS_CLUSTER_NAME} \
+                                --build-arg DB_PASSWORD=${DB_PASSWORD} \
+                                --build-arg DB_USER=${DB_USER} \
+                                --build-arg DB_NAME=${DB_NAME} \
+                                --build-arg AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
                                 --build-arg AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
                                 -t ${DATABASE_ECR_URL}:latest .
-                        """
+                        '''
                     }
                 }
             }
@@ -90,7 +113,7 @@ pipeline {
         stage('Push Docker Images to ECR') {
             steps {
                 script {
-                    sh """
+                    sh '''
                         aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${BACKEND_ECR_URL}
                         docker push ${BACKEND_ECR_URL}:latest
 
@@ -99,7 +122,7 @@ pipeline {
 
                         aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${DATABASE_ECR_URL}
                         docker push ${DATABASE_ECR_URL}:latest
-                    """
+                    '''
                 }
             }
         }
@@ -107,11 +130,11 @@ pipeline {
         stage('Deploy to ECS') {
             steps {
                 script {
-                    sh """
+                    sh '''
                         aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service backend-service --force-new-deployment --region ${AWS_REGION}
                         aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service frontend-service --force-new-deployment --region ${AWS_REGION}
                         aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service database-service --force-new-deployment --region ${AWS_REGION}
-                    """
+                    '''
                 }
             }
         }
