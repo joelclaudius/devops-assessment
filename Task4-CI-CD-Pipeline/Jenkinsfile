@@ -44,7 +44,7 @@ pipeline {
                                 --build-arg DATABASE_ECR_URL=${DATABASE_ECR_URL} --build-arg ECS_CLUSTER_NAME=${ECS_CLUSTER_NAME} \
                                 --build-arg DB_PASSWORD=${DB_PASSWORD} --build-arg DB_USER=${DB_USER} \
                                 --build-arg DB_NAME=${DB_NAME} --build-arg AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
-                                --build-arg ALLOWED_HOSTS=${ALLOWED_HOSTS} \
+                                --build-arg ALLOWED_HOSTS=${ALLOWED_HOSTS}  --build-arg DB_HOST=${DB_HOST}\
                                 --build-arg AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
                                 -t ${BACKEND_ECR_URL}:latest .
                         """
