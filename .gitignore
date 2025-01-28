@@ -23,3 +23,6 @@ override.tf.json
 # AWS credentials and sensitive files
 .aws/credentials
 .aws/config
+*.jar
+
+remoting

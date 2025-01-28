@@ -2,69 +2,108 @@ pipeline {
     agent any
 
     environment {
-        // Load environment variables from .env file
-        ENV_FILE = '.env'
+        // Fetch credentials from Jenkins secrets
+        SECRET_KEY = credentials('SECRET_KEY')
+        DEBUG = credentials('DEBUG') // If you want to store this as a credential, otherwise hardcode it
+        DB_NAME = credentials('DB_NAME')
+        DB_USER = credentials('DB_USER')
+        DB_PASSWORD = credentials('DB_PASSWORD')
+        DB_HOST = credentials('DB_HOST')
+        DB_PORT = credentials('DB_PORT')
+        ALLOWED_HOSTS = credentials('ALLOWED_HOSTS')
+        REACT_APP_API_BASE_URL = credentials('REACT_APP_API_BASE_URL')
+        REACT_APP_REFRESH_TOKEN_URL = credentials('REACT_APP_REFRESH_TOKEN_URL')
+
+        AWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY_ID')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
         AWS_REGION = credentials('AWS_REGION')
+
         FRONTEND_ECR_URL = credentials('FRONTEND_ECR_URL')
         BACKEND_ECR_URL = credentials('BACKEND_ECR_URL')
         DATABASE_ECR_URL = credentials('DATABASE_ECR_URL')
+
         ECS_CLUSTER_NAME = credentials('ECS_CLUSTER_NAME')
     }
 
     stages {
-        stage('Load Environment Variables') {
+        stage('Checkout Code') {
+            steps {
+                // Clone the repository from GitHub
+                git branch: 'main', url: 'https://github.com/joelclaudius/devops-assessment.git'
+            }
+        }
+
+        stage('Build Backend Image') {
+            steps {
+                dir('Task1-VersionControl/app/backend') {  // Pointing to the backend directory
+                    script {
+                        // Build Docker image for Backend
+                        sh """
+                            docker build --build-arg SECRET_KEY=${SECRET_KEY} --build-arg AWS_REGION=${AWS_REGION} \
+                                --build-arg FRONTEND_ECR_URL=${FRONTEND_ECR_URL} --build-arg BACKEND_ECR_URL=${BACKEND_ECR_URL} \
+                                --build-arg DATABASE_ECR_URL=${DATABASE_ECR_URL} --build-arg ECS_CLUSTER_NAME=${ECS_CLUSTER_NAME} \
+                                --build-arg DB_PASSWORD=${DB_PASSWORD} --build-arg DB_USER=${DB_USER} \
+                                --build-arg DB_NAME=${DB_NAME} --build-arg AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+                                --build-arg AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
+                                -t ${BACKEND_ECR_URL}:latest .
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Build Frontend Image') {
+            steps {
+                dir('Task1-VersionControl/app/frontend') {  // Pointing to the frontend directory
+                    script {
+                        // Build Docker image for Frontend
+                        sh """
+                            docker build --build-arg SECRET_KEY=${SECRET_KEY} --build-arg AWS_REGION=${AWS_REGION} \
+                                --build-arg FRONTEND_ECR_URL=${FRONTEND_ECR_URL} --build-arg BACKEND_ECR_URL=${BACKEND_ECR_URL} \
+                                --build-arg DATABASE_ECR_URL=${DATABASE_ECR_URL} --build-arg ECS_CLUSTER_NAME=${ECS_CLUSTER_NAME} \
+                                --build-arg DB_PASSWORD=${DB_PASSWORD} --build-arg DB_USER=${DB_USER} \
+                                --build-arg DB_NAME=${DB_NAME} --build-arg AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+                                --build-arg AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
+                                -t ${FRONTEND_ECR_URL}:latest .
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Build Database Image') {
+            steps {
+                dir('Task1-VersionControl/app/database') {  // Pointing to the database directory
+                    script {
+                        // Build Docker image for Database
+                        sh """
+                            docker build --build-arg SECRET_KEY=${SECRET_KEY} --build-arg AWS_REGION=${AWS_REGION} \
+                                --build-arg FRONTEND_ECR_URL=${FRONTEND_ECR_URL} --build-arg BACKEND_ECR_URL=${BACKEND_ECR_URL} \
+                                --build-arg DATABASE_ECR_URL=${DATABASE_ECR_URL} --build-arg ECS_CLUSTER_NAME=${ECS_CLUSTER_NAME} \
+                                --build-arg DB_PASSWORD=${DB_PASSWORD} --build-arg DB_USER=${DB_USER} \
+                                --build-arg DB_NAME=${DB_NAME} --build-arg AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+                                --build-arg AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
+                                -t ${DATABASE_ECR_URL}:latest .
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Push Docker Images to ECR') {
             steps {
                 script {
-                    // Load .env variables
-                    def envVars = readFile(env.ENV_FILE).split('\n')
-                    envVars.each { line ->
-                        if (line.trim()) {
-                            def (key, value) = line.tokenize('=')
-                            env[key] = value
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('Build Backend') {
-            steps {
-                dir('backend') {
-                    script {
-                        sh """
-                        docker build -t ${BACKEND_ECR_URL}:latest .
+                    // Login to AWS ECR and push images to respective ECR repositories
+                    sh """
                         aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${BACKEND_ECR_URL}
                         docker push ${BACKEND_ECR_URL}:latest
-                        """
-                    }
-                }
-            }
-        }
 
-        stage('Build Frontend') {
-            steps {
-                dir('frontend') {
-                    script {
-                        sh """
-                        docker build -t ${FRONTEND_ECR_URL}:latest .
                         aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${FRONTEND_ECR_URL}
                         docker push ${FRONTEND_ECR_URL}:latest
-                        """
-                    }
-                }
-            }
-        }
 
-        stage('Build Database') {
-            steps {
-                dir('database') {
-                    script {
-                        sh """
-                        docker build -t ${DATABASE_ECR_URL}:latest .
                         aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${DATABASE_ECR_URL}
                         docker push ${DATABASE_ECR_URL}:latest
-                        """
-                    }
+                    """
                 }
             }
         }
@@ -72,10 +111,11 @@ pipeline {
         stage('Deploy to ECS') {
             steps {
                 script {
+                    // Deploy the updated Docker images to ECS services
                     sh """
-                    aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service backend-service --force-new-deployment --region ${AWS_REGION}
-                    aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service frontend-service --force-new-deployment --region ${AWS_REGION}
-                    aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service database-service --force-new-deployment --region ${AWS_REGION}
+                        aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service backend-service --force-new-deployment --region ${AWS_REGION}
+                        aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service frontend-service --force-new-deployment --region ${AWS_REGION}
+                        aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service database-service --force-new-deployment --region ${AWS_REGION}
                     """
                 }
             }
