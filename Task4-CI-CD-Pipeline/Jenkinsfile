@@ -1,0 +1,93 @@
+pipeline {
+    agent any
+
+    environment {
+        // Load environment variables from .env file
+        ENV_FILE = '.env'
+        AWS_REGION = credentials('AWS_REGION')
+        FRONTEND_ECR_URL = credentials('FRONTEND_ECR_URL')
+        BACKEND_ECR_URL = credentials('BACKEND_ECR_URL')
+        DATABASE_ECR_URL = credentials('DATABASE_ECR_URL')
+        ECS_CLUSTER_NAME = credentials('ECS_CLUSTER_NAME')
+    }
+
+    stages {
+        stage('Load Environment Variables') {
+            steps {
+                script {
+                    // Load .env variables
+                    def envVars = readFile(env.ENV_FILE).split('\n')
+                    envVars.each { line ->
+                        if (line.trim()) {
+                            def (key, value) = line.tokenize('=')
+                            env[key] = value
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Build Backend') {
+            steps {
+                dir('backend') {
+                    script {
+                        sh """
+                        docker build -t ${BACKEND_ECR_URL}:latest .
+                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${BACKEND_ECR_URL}
+                        docker push ${BACKEND_ECR_URL}:latest
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Build Frontend') {
+            steps {
+                dir('frontend') {
+                    script {
+                        sh """
+                        docker build -t ${FRONTEND_ECR_URL}:latest .
+                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${FRONTEND_ECR_URL}
+                        docker push ${FRONTEND_ECR_URL}:latest
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Build Database') {
+            steps {
+                dir('database') {
+                    script {
+                        sh """
+                        docker build -t ${DATABASE_ECR_URL}:latest .
+                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${DATABASE_ECR_URL}
+                        docker push ${DATABASE_ECR_URL}:latest
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to ECS') {
+            steps {
+                script {
+                    sh """
+                    aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service backend-service --force-new-deployment --region ${AWS_REGION}
+                    aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service frontend-service --force-new-deployment --region ${AWS_REGION}
+                    aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service database-service --force-new-deployment --region ${AWS_REGION}
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Deployment successful!"
+        }
+        failure {
+            echo "Pipeline failed!"
+        }
+    }
+}
