@@ -9,7 +9,7 @@ pipeline {
         DB_USER = credentials('DB_USER')
         DB_PASSWORD = credentials('DB_PASSWORD')
         DB_HOST = credentials('DB_HOST')
-        DB_PORT = credentials('DB_PORT') ?: '5432'  // Default to 5432 if DB_PORT is not found
+        DB_PORT = credentials('DB_PORT') // Default to 5432 if DB_PORT is not found
         ALLOWED_HOSTS = credentials('ALLOWED_HOSTS')
         REACT_APP_API_BASE_URL = credentials('REACT_APP_API_BASE_URL')
         REACT_APP_REFRESH_TOKEN_URL = credentials('REACT_APP_REFRESH_TOKEN_URL')
