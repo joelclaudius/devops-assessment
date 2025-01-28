@@ -4,7 +4,7 @@ pipeline {
     environment {
         // Fetch credentials from Jenkins secrets
         SECRET_KEY = credentials('SECRET_KEY')
-        DEBUG = credentials('DEBUG') // If you want to store this as a credential, otherwise hardcode it
+        DEBUG = credentials('DEBUG') 
         DB_NAME = credentials('DB_NAME')
         DB_USER = credentials('DB_USER')
         DB_PASSWORD = credentials('DB_PASSWORD')
@@ -28,23 +28,21 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                // Clone the repository from GitHub
                 git branch: 'main', url: 'https://github.com/joelclaudius/devops-assessment.git'
             }
         }
 
         stage('Build Backend Image') {
             steps {
-                dir('Task1-VersionControl/app/backend') {  // Pointing to the backend directory
+                dir('Task1-VersionControl/app/backend') {
                     script {
-                        // Build Docker image for Backend
                         sh """
                             docker build --build-arg SECRET_KEY=${SECRET_KEY} --build-arg AWS_REGION=${AWS_REGION} \
                                 --build-arg FRONTEND_ECR_URL=${FRONTEND_ECR_URL} --build-arg BACKEND_ECR_URL=${BACKEND_ECR_URL} \
                                 --build-arg DATABASE_ECR_URL=${DATABASE_ECR_URL} --build-arg ECS_CLUSTER_NAME=${ECS_CLUSTER_NAME} \
                                 --build-arg DB_PASSWORD=${DB_PASSWORD} --build-arg DB_USER=${DB_USER} \
                                 --build-arg DB_NAME=${DB_NAME} --build-arg AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
-                                --build-arg ALLOWED_HOSTS=${ALLOWED_HOSTS}  --build-arg DB_HOST=${DB_HOST}\
+                                --build-arg ALLOWED_HOSTS=${ALLOWED_HOSTS} --build-arg DB_HOST=${DB_HOST} \
                                 --build-arg AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
                                 -t ${BACKEND_ECR_URL}:latest .
                         """
@@ -55,9 +53,8 @@ pipeline {
 
         stage('Build Frontend Image') {
             steps {
-                dir('Task1-VersionControl/app/frontend') {  // Pointing to the frontend directory
+                dir('Task1-VersionControl/app/frontend') {
                     script {
-                        // Build Docker image for Frontend
                         sh """
                             docker build --build-arg SECRET_KEY=${SECRET_KEY} --build-arg AWS_REGION=${AWS_REGION} \
                                 --build-arg FRONTEND_ECR_URL=${FRONTEND_ECR_URL} --build-arg BACKEND_ECR_URL=${BACKEND_ECR_URL} \
@@ -74,9 +71,8 @@ pipeline {
 
         stage('Build Database Image') {
             steps {
-                dir('Task1-VersionControl/app/database') {  // Pointing to the database directory
+                dir('Task1-VersionControl/app/database') {
                     script {
-                        // Build Docker image for Database
                         sh """
                             docker build --build-arg SECRET_KEY=${SECRET_KEY} --build-arg AWS_REGION=${AWS_REGION} \
                                 --build-arg FRONTEND_ECR_URL=${FRONTEND_ECR_URL} --build-arg BACKEND_ECR_URL=${BACKEND_ECR_URL} \
@@ -94,7 +90,6 @@ pipeline {
         stage('Push Docker Images to ECR') {
             steps {
                 script {
-                    // Login to AWS ECR and push images to respective ECR repositories
                     sh """
                         aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${BACKEND_ECR_URL}
                         docker push ${BACKEND_ECR_URL}:latest
@@ -112,7 +107,6 @@ pipeline {
         stage('Deploy to ECS') {
             steps {
                 script {
-                    // Deploy the updated Docker images to ECS services
                     sh """
                         aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service backend-service --force-new-deployment --region ${AWS_REGION}
                         aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service frontend-service --force-new-deployment --region ${AWS_REGION}
