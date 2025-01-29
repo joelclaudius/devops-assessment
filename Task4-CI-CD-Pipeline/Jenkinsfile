@@ -47,7 +47,7 @@ pipeline {
                 dir('Task4-CI-CD-Pipeline/ecr-ecs-setup') {
                     script {
                         sh '''
-                            /usr/local/bin/terraform init
+                            sh '/usr/local/bin/terraform init'
                         '''
                     }
                 }
