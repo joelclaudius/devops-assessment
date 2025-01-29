@@ -29,10 +29,10 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 script {
-                    checkout([
-                        $class: 'GitSCM',
-                        branches: [[name: 'main']],
-                        userRemoteConfigs: [[url: 'https://github.com/joelclaudius/devops-assessment.git']]
+                    checkout([ 
+                        $class: 'GitSCM', 
+                        branches: [[name: 'main']], 
+                        userRemoteConfigs: [[url: 'https://github.com/joelclaudius/devops-assessment.git']] 
                     ])
                 }
             }
@@ -57,6 +57,9 @@ pipeline {
                     script {
                         def COMMIT_SHA = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
 
+                        // Debugging for proper commit hash
+                        echo "Commit SHA for Backend: ${COMMIT_SHA}"
+
                         sh '''
                             set -x
                             echo "Building backend image..."
@@ -73,10 +76,9 @@ pipeline {
                                 --build-arg AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
                                 --build-arg AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
                                 --build-arg ALLOWED_HOSTS="${ALLOWED_HOSTS}" \
-                                -t "myrepo/myimage:latest" \
-                                -t "myrepo/myimage:${COMMIT_SHA}" \
+                                -t "${BACKEND_ECR_URL}:latest" \
+                                -t "${BACKEND_ECR_URL}:${COMMIT_SHA}" \
                                 .
-
                         '''
 
                         sh '''
@@ -89,8 +91,6 @@ pipeline {
             }
         }
 
-
-
         stage('Build and Push Frontend Image') {
             steps {
                 dir('Task1-VersionControl/app/frontend') {
@@ -98,6 +98,9 @@ pipeline {
                         def GIT_COMMIT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
                         def IMAGE_TAG = "latest"
                         def VERSION_TAG = "${GIT_COMMIT}"
+
+                        // Debugging for proper commit hash
+                        echo "Commit SHA for Frontend: ${GIT_COMMIT}"
 
                         sh '''
                             echo "Building frontend image..."
@@ -124,6 +127,9 @@ pipeline {
                         def GIT_COMMIT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
                         def IMAGE_TAG = "latest"
                         def VERSION_TAG = "${GIT_COMMIT}"
+
+                        // Debugging for proper commit hash
+                        echo "Commit SHA for Database: ${GIT_COMMIT}"
 
                         sh '''
                             echo "Building database image..."
