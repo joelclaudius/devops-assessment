@@ -43,15 +43,20 @@ pipeline {
         }
 
         stage('Setup Terraform Environment') {
-            steps {
-                dir('Task4-CI-CD-Pipeline/ecr-ecs-setup') {
-                    script {
-                        // Set up Terraform environment in the specified directory
-                        sh 'terraform init'
-                    }
+        steps {
+            dir('Task4-CI-CD-Pipeline/ecr-ecs-setup') {
+                script {
+                    // Add the directory where Terraform is installed to the PATH
+                    sh '''
+                        echo "Current PATH: $PATH"
+                        export PATH=$PATH:/usr/local/bin  # Add the location of Terraform
+                        terraform init
+                    '''
                 }
             }
         }
+    }
+
 
         stage('Provision Infrastructure with Terraform') {
             steps {
