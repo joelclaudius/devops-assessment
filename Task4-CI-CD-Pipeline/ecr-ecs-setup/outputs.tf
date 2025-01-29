@@ -79,3 +79,18 @@ output "database_security_group_id" {
   description = "The security group ID for the database"
   value       = aws_security_group.database_sg.id
 }
+
+output "frontend_alb_url" {
+  description = "The URL of the frontend application load balancer"
+  value       = "http://${aws_lb.frontend_alb.dns_name}"
+}
+
+output "frontend_alb_dns_name" {
+  description = "The DNS name of the frontend ALB"
+  value       = aws_lb.frontend_alb.dns_name
+}
+
+output "frontend_alb_arn" {
+  description = "The ARN of the frontend ALB"
+  value       = aws_lb.frontend_alb.arn
+}
