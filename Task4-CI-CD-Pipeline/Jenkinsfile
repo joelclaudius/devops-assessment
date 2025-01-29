@@ -22,6 +22,11 @@ pipeline {
         DATABASE_ECR_URL = credentials('DATABASE_ECR_URL')
 
         ECS_CLUSTER_NAME = credentials('ECS_CLUSTER_NAME')
+        DJANGO_SETTINGS_MODULE = credentials('DJANGO_SETTINGS_MODULE')
+        DATABASE_URL = credentials('DATABASE_URL')
+
+
+
     }
 
     stages {
@@ -71,6 +76,7 @@ pipeline {
                                 --build-arg AWS_REGION="${AWS_REGION}" \
                                 --build-arg DB_PASSWORD="${DB_PASSWORD}" \
                                 --build-arg DB_USER="${DB_USER}" \
+                                --build -arg DATABASE_URL="${DATABASE_URL}" \
                                 --build-arg DB_NAME="${DB_NAME}" \
                                 --build-arg DB_HOST="${DB_HOST}" \
                                 --build-arg AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
@@ -88,6 +94,8 @@ pipeline {
                 }
             }
         }
+
+        
 
         stage('Build and Push Frontend Image') {
             steps {

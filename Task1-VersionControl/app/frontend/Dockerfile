@@ -16,8 +16,6 @@ RUN apk add --no-cache certbot nginx certbot-nginx
 COPY --from=build-stage /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy SSL certificates into the container (Ensure this path matches your certs location)
-COPY ./certs /etc/letsencrypt
 
 # Expose ports 80 and 443 for HTTP and HTTPS
 EXPOSE 80 443
