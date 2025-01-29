@@ -44,7 +44,7 @@ pipeline {
 
         stage('Setup Terraform Environment') {
             steps {
-                dir('/home/administrator/devops-assessment/Task4-CI-CD-Pipeline/ecr-ecs-setup') {
+                dir('Task4-CI-CD-Pipeline/ecr-ecs-setup') {
                     script {
                         // Set up Terraform environment in the specified directory
                         sh 'terraform init'
