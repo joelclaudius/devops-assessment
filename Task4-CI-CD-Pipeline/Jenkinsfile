@@ -62,18 +62,19 @@ pipeline {
                             echo "DB_USER=${DB_USER}"
                             echo "AWS_REGION=${AWS_REGION}"
                             DOCKER_BUILDKIT=1 docker build \
-                                --build-arg SECRET_KEY=${SECRET_KEY} \
-                                --build-arg AWS_REGION=${AWS_REGION} \
-                                --build-arg DB_PASSWORD=${DB_PASSWORD} \
-                                --build-arg DB_USER=${DB_USER} \
-                                --build-arg DB_NAME=${DB_NAME} \
-                                --build-arg DB_HOST=db \
-                                --build-arg AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
-                                --build-arg AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
-                                --build-arg ALLOWED_HOSTS=${ALLOWED_HOSTS} \
-                                -t ${BACKEND_ECR_URL}:latest \
-                                -t ${BACKEND_ECR_URL}:${COMMIT_SHA} \
+                                --build-arg SECRET_KEY="${SECRET_KEY}" \
+                                --build-arg AWS_REGION="${AWS_REGION}" \
+                                --build-arg DB_PASSWORD="${DB_PASSWORD}" \
+                                --build-arg DB_USER="${DB_USER}" \
+                                --build-arg DB_NAME="${DB_NAME}" \
+                                --build-arg DB_HOST="${DB_HOST}" \
+                                --build-arg AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
+                                --build-arg AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
+                                --build-arg ALLOWED_HOSTS="${ALLOWED_HOSTS}" \
+                                -t "${BACKEND_ECR_URL}:latest" \
+                                -t "${BACKEND_ECR_URL}:${COMMIT_SHA}" \
                                 .
+
                         '''
 
                         sh '''
