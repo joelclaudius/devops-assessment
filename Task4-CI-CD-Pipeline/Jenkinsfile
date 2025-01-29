@@ -62,6 +62,7 @@ pipeline {
                             echo "Building backend image..."
                             echo "DB_USER=${DB_USER}"
                             echo "AWS_REGION=${AWS_REGION}"
+                            echo "BACKEND_ECR_URL=${BACKEND_ECR_URL}"
                             DOCKER_BUILDKIT=1 docker build \
                                 --build-arg SECRET_KEY="${SECRET_KEY}" \
                                 --build-arg AWS_REGION="${AWS_REGION}" \
@@ -73,7 +74,7 @@ pipeline {
                                 --build-arg AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
                                 --build-arg ALLOWED_HOSTS="${ALLOWED_HOSTS}" \
                                 -t "${BACKEND_ECR_URL}:latest" \
-                                -t ${BACKEND_ECR_URL}:${COMMIT_SHA} \
+                                -t "${BACKEND_ECR_URL}:${COMMIT_SHA}" \
                                 .
 
                         '''
