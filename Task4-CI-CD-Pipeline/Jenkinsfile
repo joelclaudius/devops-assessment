@@ -55,34 +55,35 @@ pipeline {
             steps {
                 dir('Task1-VersionControl/app/backend') {
                     script {
-                        def GIT_COMMIT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
-                        def IMAGE_TAG = "latest"
-                        def VERSION_TAG = "${GIT_COMMIT}"
+                        def COMMIT_SHA = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
 
-                        sh '''
-                            echo "Building backend image..."
-                            DOCKER_BUILDKIT=1 docker build -t ${BACKEND_ECR_URL}:${IMAGE_TAG} -t ${BACKEND_ECR_URL}:${VERSION_TAG} \
+                        sh """
+                            echo 'Building backend image...'
+                            DOCKER_BUILDKIT=1 docker build \
                                 --build-arg SECRET_KEY=${SECRET_KEY} \
                                 --build-arg AWS_REGION=${AWS_REGION} \
                                 --build-arg DB_PASSWORD=${DB_PASSWORD} \
                                 --build-arg DB_USER=${DB_USER} \
                                 --build-arg DB_NAME=${DB_NAME} \
-                                --build-arg DB_HOST=${DB_HOST} \
+                                --build-arg DB_HOST=db \
                                 --build-arg AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
                                 --build-arg AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
                                 --build-arg ALLOWED_HOSTS=${ALLOWED_HOSTS} \
+                                -t ${BACKEND_ECR_URL}:latest \
+                                -t ${BACKEND_ECR_URL}:${COMMIT_SHA} \
                                 .
-                        '''
-                        
-                        sh '''
-                            echo "Pushing backend image to ECR..."
-                            docker push ${BACKEND_ECR_URL}:${IMAGE_TAG}
-                            docker push ${BACKEND_ECR_URL}:${VERSION_TAG}
-                        '''
+                        """
+
+                        sh """
+                            echo 'Pushing backend image to ECR...'
+                            docker push ${BACKEND_ECR_URL}:latest
+                            docker push ${BACKEND_ECR_URL}:${COMMIT_SHA}
+                        """
                     }
                 }
             }
         }
+
 
         stage('Build and Push Frontend Image') {
             steps {
