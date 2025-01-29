@@ -44,25 +44,25 @@ pipeline {
 
         stage('Setup Terraform Environment') {
             steps {
-                script {
-                    // Set up Terraform environment in the specified directory
-                    sh '''
-                        cd /home/administrator/devops-assessment/Task4-CI-CD-Pipeline/ecr-ecs-setup
-                        terraform init
-                    '''
+                dir('/home/administrator/devops-assessment/Task4-CI-CD-Pipeline/ecr-ecs-setup') {
+                    script {
+                        // Set up Terraform environment in the specified directory
+                        sh 'terraform init'
+                    }
                 }
             }
         }
 
         stage('Provision Infrastructure with Terraform') {
             steps {
-                script {
-                    // Apply Terraform configurations to create/modify resources in AWS from the specified directory
-                    sh '''
-                        cd /home/administrator/devops-assessment/Task4-CI-CD-Pipeline/ecr-ecs-setup
-                        echo "Applying Terraform configuration to provision infrastructure..."
-                        terraform apply -auto-approve
-                    '''
+                dir('/home/administrator/devops-assessment/Task4-CI-CD-Pipeline/ecr-ecs-setup') {
+                    script {
+                        // Apply Terraform configurations to create/modify resources in AWS from the specified directory
+                        sh '''
+                            echo "Applying Terraform configuration to provision infrastructure..."
+                            terraform apply -auto-approve
+                        '''
+                    }
                 }
             }
         }
