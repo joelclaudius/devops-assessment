@@ -58,7 +58,8 @@ pipeline {
                         def COMMIT_SHA = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
 
                         sh '''
-                            echo 'Building backend image...'
+                            set -x
+                            echo "Building backend image..."
                             echo "DB_USER=${DB_USER}"
                             echo "AWS_REGION=${AWS_REGION}"
                             DOCKER_BUILDKIT=1 docker build \
