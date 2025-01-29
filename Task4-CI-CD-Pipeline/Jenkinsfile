@@ -2,6 +2,7 @@ pipeline {
     agent any
 
     environment {
+        // Fetch credentials from Jenkins secrets
         SECRET_KEY = credentials('SECRET_KEY')
         DEBUG = credentials('DEBUG')
         DB_NAME = credentials('DB_NAME')
@@ -28,7 +29,11 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 script {
-                    checkout scm
+                    checkout([ 
+                        $class: 'GitSCM', 
+                        branches: [[name: 'main']], 
+                        userRemoteConfigs: [[url: 'https://github.com/joelclaudius/devops-assessment.git']] 
+                    ])
                 }
             }
         }
@@ -36,10 +41,12 @@ pipeline {
         stage('Setup Docker Authentication') {
             steps {
                 script {
-                    echo "Logging into AWS ECR..."
-                    withDockerRegistry([credentialsId: 'AWS_ECR_CREDENTIALS', url: "https://${BACKEND_ECR_URL}"]) {}
-                    withDockerRegistry([credentialsId: 'AWS_ECR_CREDENTIALS', url: "https://${FRONTEND_ECR_URL}"]) {}
-                    withDockerRegistry([credentialsId: 'AWS_ECR_CREDENTIALS', url: "https://${DATABASE_ECR_URL}"]) {}
+                    sh '''
+                        echo "Logging into AWS ECR..."
+                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${BACKEND_ECR_URL}
+                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${FRONTEND_ECR_URL}
+                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${DATABASE_ECR_URL}
+                    '''
                 }
             }
         }
@@ -48,43 +55,72 @@ pipeline {
             steps {
                 dir('Task1-VersionControl/app/backend') {
                     script {
+                        // Ensure COMMIT_SHA is retrieved properly
                         def COMMIT_SHA = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                        def IMAGE_TAG = "latest"
+                        def IMAGE_TAG = "latest"  // You can keep it dynamic as per your requirement
 
                         echo "Commit SHA for Backend: ${COMMIT_SHA}"
                         echo "Using IMAGE_TAG: ${IMAGE_TAG}"
 
-                        docker.build("${BACKEND_ECR_URL}:${IMAGE_TAG}", 
-                            "--build-arg SECRET_KEY=${SECRET_KEY} \
-                             --build-arg AWS_REGION=${AWS_REGION} \
-                             --build-arg DB_PASSWORD=${DB_PASSWORD} \
-                             --build-arg DB_USER=${DB_USER} \
-                             --build-arg DB_NAME=${DB_NAME} \
-                             --build-arg DB_HOST=${DB_HOST} \
-                             --build-arg AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
-                             --build-arg AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
-                             --build-arg ALLOWED_HOSTS=${ALLOWED_HOSTS} .")
-                            .withTag("${BACKEND_ECR_URL}:${COMMIT_SHA}")
-                            .push()
+                        // Check if the COMMIT_SHA is not empty
+                        if (!COMMIT_SHA) {
+                            error "COMMIT_SHA is empty! Unable to proceed with build."
+                        }
+
+                        sh '''
+                            set -x
+                            echo "Building backend image..."
+                            DOCKER_BUILDKIT=1 docker build \
+                                --build-arg SECRET_KEY="${SECRET_KEY}" \
+                                --build-arg AWS_REGION="${AWS_REGION}" \
+                                --build-arg DB_PASSWORD="${DB_PASSWORD}" \
+                                --build-arg DB_USER="${DB_USER}" \
+                                --build-arg DB_NAME="${DB_NAME}" \
+                                --build-arg DB_HOST="${DB_HOST}" \
+                                --build-arg AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
+                                --build-arg AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
+                                --build-arg ALLOWED_HOSTS="${ALLOWED_HOSTS}" \
+                                -t "${BACKEND_ECR_URL}:$IMAGE_TAG" \
+                                -t "${BACKEND_ECR_URL}:$COMMIT_SHA" \
+                                .
+                        '''
+
+                        sh '''
+                            echo 'Pushing backend image to ECR...'
+                            docker push ${BACKEND_ECR_URL}:${IMAGE_TAG}
+                            docker push ${BACKEND_ECR_URL}:${COMMIT_SHA}
+                        '''
                     }
                 }
             }
         }
 
+
+
         stage('Build and Push Frontend Image') {
             steps {
                 dir('Task1-VersionControl/app/frontend') {
                     script {
-                        def COMMIT_SHA = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                        def GIT_COMMIT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
                         def IMAGE_TAG = "latest"
+                        def VERSION_TAG = "${GIT_COMMIT}"
 
-                        echo "Commit SHA for Frontend: ${COMMIT_SHA}"
+                        // Debugging for proper commit hash
+                        echo "Commit SHA for Frontend: ${GIT_COMMIT}"
 
-                        docker.build("${FRONTEND_ECR_URL}:${IMAGE_TAG}", 
-                            "--build-arg REACT_APP_API_BASE_URL=${REACT_APP_API_BASE_URL} \
-                             --build-arg REACT_APP_REFRESH_TOKEN_URL=${REACT_APP_REFRESH_TOKEN_URL} .")
-                            .withTag("${FRONTEND_ECR_URL}:${COMMIT_SHA}")
-                            .push()
+                        sh '''
+                            echo "Building frontend image..."
+                            DOCKER_BUILDKIT=1 docker build -t ${FRONTEND_ECR_URL}:${IMAGE_TAG} -t ${FRONTEND_ECR_URL}:${VERSION_TAG} \
+                                --build-arg REACT_APP_API_BASE_URL=${REACT_APP_API_BASE_URL} \
+                                --build-arg REACT_APP_REFRESH_TOKEN_URL=${REACT_APP_REFRESH_TOKEN_URL} \
+                                .
+                        '''
+                        
+                        sh '''
+                            echo "Pushing frontend image to ECR..."
+                            docker push ${FRONTEND_ECR_URL}:${IMAGE_TAG}
+                            docker push ${FRONTEND_ECR_URL}:${VERSION_TAG}
+                        '''
                     }
                 }
             }
@@ -94,18 +130,28 @@ pipeline {
             steps {
                 dir('Task1-VersionControl/app/database') {
                     script {
-                        def COMMIT_SHA = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                        def GIT_COMMIT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
                         def IMAGE_TAG = "latest"
+                        def VERSION_TAG = "${GIT_COMMIT}"
 
-                        echo "Commit SHA for Database: ${COMMIT_SHA}"
+                        // Debugging for proper commit hash
+                        echo "Commit SHA for Database: ${GIT_COMMIT}"
 
-                        docker.build("${DATABASE_ECR_URL}:${IMAGE_TAG}", 
-                            "--build-arg DB_NAME=${DB_NAME} \
-                             --build-arg DB_USER=${DB_USER} \
-                             --build-arg DB_PASSWORD=${DB_PASSWORD} \
-                             --build-arg DB_HOST=${DB_HOST} .")
-                            .withTag("${DATABASE_ECR_URL}:${COMMIT_SHA}")
-                            .push()
+                        sh '''
+                            echo "Building database image..."
+                            DOCKER_BUILDKIT=1 docker build -t ${DATABASE_ECR_URL}:${IMAGE_TAG} -t ${DATABASE_ECR_URL}:${VERSION_TAG} \
+                                --build-arg DB_NAME=${DB_NAME} \
+                                --build-arg DB_USER=${DB_USER} \
+                                --build-arg DB_PASSWORD=${DB_PASSWORD} \
+                                --build-arg DB_HOST=${DB_HOST} \
+                                .
+                        '''
+                        
+                        sh '''
+                            echo "Pushing database image to ECR..."
+                            docker push ${DATABASE_ECR_URL}:${IMAGE_TAG}
+                            docker push ${DATABASE_ECR_URL}:${VERSION_TAG}
+                        '''
                     }
                 }
             }
@@ -114,10 +160,12 @@ pipeline {
         stage('Deploy to ECS') {
             steps {
                 script {
-                    echo "Updating ECS services..."
-                    sh "aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service backend-service --force-new-deployment --region ${AWS_REGION}"
-                    sh "aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service frontend-service --force-new-deployment --region ${AWS_REGION}"
-                    sh "aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service database-service --force-new-deployment --region ${AWS_REGION}"
+                    sh '''
+                        echo "Updating ECS services..."
+                        aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service backend-service --force-new-deployment --region ${AWS_REGION}
+                        aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service frontend-service --force-new-deployment --region ${AWS_REGION}
+                        aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service database-service --force-new-deployment --region ${AWS_REGION}
+                    '''
                 }
             }
         }
