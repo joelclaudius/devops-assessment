@@ -47,7 +47,7 @@ pipeline {
                 script {
                     // Set up Terraform environment in the specified directory
                     sh '''
-                        cd /Task4-CI-CD-Pipeline/ecr-ecs-setup
+                        cd /home/administrator/devops-assessment/Task4-CI-CD-Pipeline/ecr-ecs-setup
                         terraform init
                     '''
                 }
@@ -59,7 +59,7 @@ pipeline {
                 script {
                     // Apply Terraform configurations to create/modify resources in AWS from the specified directory
                     sh '''
-                        cd /Task4-CI-CD-Pipeline/ecr-ecs-setup
+                        cd /home/administrator/devops-assessment/Task4-CI-CD-Pipeline/ecr-ecs-setup
                         echo "Applying Terraform configuration to provision infrastructure..."
                         terraform apply -auto-approve
                     '''
