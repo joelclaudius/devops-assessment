@@ -57,8 +57,10 @@ pipeline {
                     script {
                         def COMMIT_SHA = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
 
-                        sh """
+                        sh '''
                             echo 'Building backend image...'
+                            echo "DB_USER=${DB_USER}"
+                            echo "AWS_REGION=${AWS_REGION}"
                             DOCKER_BUILDKIT=1 docker build \
                                 --build-arg SECRET_KEY=${SECRET_KEY} \
                                 --build-arg AWS_REGION=${AWS_REGION} \
@@ -70,19 +72,19 @@ pipeline {
                                 --build-arg AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
                                 --build-arg ALLOWED_HOSTS=${ALLOWED_HOSTS} \
                                 -t ${BACKEND_ECR_URL}:latest \
-                                -t ${BACKEND_ECR_URL}:${COMMIT_SHA} \
-                                .
-                        """
+                                -t ${BACKEND_ECR_URL}:${COMMIT_SHA} .
+                        '''
 
-                        sh """
+                        sh '''
                             echo 'Pushing backend image to ECR...'
                             docker push ${BACKEND_ECR_URL}:latest
                             docker push ${BACKEND_ECR_URL}:${COMMIT_SHA}
-                        """
+                        '''
                     }
                 }
             }
         }
+
 
 
         stage('Build and Push Frontend Image') {
