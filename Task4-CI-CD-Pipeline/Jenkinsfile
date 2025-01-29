@@ -55,19 +55,21 @@ pipeline {
             steps {
                 dir('Task1-VersionControl/app/backend') {
                     script {
+                        // Ensure COMMIT_SHA is retrieved properly
                         def COMMIT_SHA = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                        def IMAGE_TAG = "latest" // Or use other tag format based on your requirements
+                        def IMAGE_TAG = "latest"  // You can keep it dynamic as per your requirement
+
+                        echo "Commit SHA for Backend: ${COMMIT_SHA}"
+                        echo "Using IMAGE_TAG: ${IMAGE_TAG}"
+
+                        // Check if the COMMIT_SHA is not empty
+                        if (!COMMIT_SHA) {
+                            error "COMMIT_SHA is empty! Unable to proceed with build."
+                        }
 
                         sh '''
                             set -x
                             echo "Building backend image..."
-                            echo "DB_USER=${DB_USER}"
-                            echo "AWS_REGION=${AWS_REGION}"
-                            echo "BACKEND_ECR_URL=${BACKEND_ECR_URL}"
-                            echo "BACKEND_ECR_URL: ${BACKEND_ECR_URL}"
-                            echo "IMAGE_TAG: ${IMAGE_TAG}"
-                            echo "COMMIT_SHA: ${COMMIT_SHA}"
-
                             DOCKER_BUILDKIT=1 docker build \
                                 --build-arg SECRET_KEY="${SECRET_KEY}" \
                                 --build-arg AWS_REGION="${AWS_REGION}" \
@@ -92,6 +94,7 @@ pipeline {
                 }
             }
         }
+
 
 
         stage('Build and Push Frontend Image') {
