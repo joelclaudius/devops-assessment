@@ -2,11 +2,31 @@ pipeline {
     agent any
 
     environment {
+        SECRET_KEY = credentials('SECRET_KEY')
+        DEBUG = credentials('DEBUG')
+        DB_NAME = credentials('DB_NAME')
+        DB_USER = credentials('DB_USER')
+        DB_PASSWORD = credentials('DB_PASSWORD')
+        DB_HOST = credentials('DB_HOST')
+        DB_PORT = credentials('DB_PORT')
+        ALLOWED_HOSTS = credentials('ALLOWED_HOSTS')
+        REACT_APP_API_BASE_URL = credentials('REACT_APP_API_BASE_URL')
+        REACT_APP_REFRESH_TOKEN_URL = credentials('REACT_APP_REFRESH_TOKEN_URL')
+
         AWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY_ID')
         AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
         AWS_REGION = credentials('AWS_REGION')
 
+        FRONTEND_ECR_URL = credentials('FRONTEND_ECR_URL')
+        BACKEND_ECR_URL = credentials('BACKEND_ECR_URL')
+        DATABASE_ECR_URL = credentials('DATABASE_ECR_URL')
+
         ECS_CLUSTER_NAME = credentials('ECS_CLUSTER_NAME')
+        DJANGO_SETTINGS_MODULE = credentials('DJANGO_SETTINGS_MODULE')
+        DATABASE_URL = credentials('DATABASE_URL')
+
+
+
     }
 
     stages {
@@ -51,7 +71,9 @@ pipeline {
 
                         sh """
                             echo "Building backend image..."
-                            DOCKER_BUILDKIT=1 docker build -t ${BACKEND_ECR_URL}:${IMAGE_TAG} -t ${BACKEND_ECR_URL}:${COMMIT_SHA} .
+                            DOCKER_BUILDKIT=1 docker build -t ${BACKEND_ECR_URL}:${IMAGE_TAG} -t ${BACKEND_ECR_URL}:${COMMIT_SHA} \
+                                --build-arg DJANGO_SETTINGS_MODULE="${DJANGO_SETTINGS_MODULE}" \
+                                .
                         """
 
                         sh """
@@ -63,6 +85,8 @@ pipeline {
                 }
             }
         }
+
+        
 
         stage('Build and Push Frontend Image') {
             steps {
@@ -79,7 +103,8 @@ pipeline {
 
                         sh """
                             echo "Building frontend image..."
-                            DOCKER_BUILDKIT=1 docker build -t ${FRONTEND_ECR_URL}:${IMAGE_TAG} -t ${FRONTEND_ECR_URL}:${COMMIT_SHA} .
+                            DOCKER_BUILDKIT=1 docker build -t ${FRONTEND_ECR_URL}:${IMAGE_TAG} -t ${FRONTEND_ECR_URL}:${COMMIT_SHA} \
+                                .
                         """
 
                         sh """
@@ -107,7 +132,8 @@ pipeline {
 
                         sh """
                             echo "Building database image..."
-                            DOCKER_BUILDKIT=1 docker build -t ${DATABASE_ECR_URL}:${IMAGE_TAG} -t ${DATABASE_ECR_URL}:${COMMIT_SHA} .
+                            DOCKER_BUILDKIT=1 docker build -t ${DATABASE_ECR_URL}:${IMAGE_TAG} -t ${DATABASE_ECR_URL}:${COMMIT_SHA} \
+                                .
                         """
 
                         sh """
@@ -123,10 +149,8 @@ pipeline {
         stage('Deploy to ECS') {
             steps {
                 script {
-                    echo "Updating ECS services with the new images..."
-
-                    // Update the ECS services to use the new images
                     sh """
+                        echo "Updating ECS services..."
                         aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service backend-service --force-new-deployment --region ${AWS_REGION}
                         aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service frontend-service --force-new-deployment --region ${AWS_REGION}
                         aws ecs update-service --cluster ${ECS_CLUSTER_NAME} --service database-service --force-new-deployment --region ${AWS_REGION}
