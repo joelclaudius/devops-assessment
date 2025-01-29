@@ -25,8 +25,8 @@ pipeline {
         DJANGO_SETTINGS_MODULE = credentials('DJANGO_SETTINGS_MODULE')
         DATABASE_URL = credentials('DATABASE_URL')
 
-
-
+        TF_VAR_AWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY_ID')
+        TF_VAR_AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
     }
 
     stages {
@@ -38,6 +38,31 @@ pipeline {
                         branches: [[name: 'main']],
                         userRemoteConfigs: [[url: 'https://github.com/joelclaudius/devops-assessment.git']]
                     ])
+                }
+            }
+        }
+
+        stage('Setup Terraform Environment') {
+            steps {
+                script {
+                    // Set up Terraform environment in the specified directory
+                    sh '''
+                        cd /Task4-CI-CD-Pipeline/ecr-ecs-setup
+                        terraform init
+                    '''
+                }
+            }
+        }
+
+        stage('Provision Infrastructure with Terraform') {
+            steps {
+                script {
+                    // Apply Terraform configurations to create/modify resources in AWS from the specified directory
+                    sh '''
+                        cd /Task4-CI-CD-Pipeline/ecr-ecs-setup
+                        echo "Applying Terraform configuration to provision infrastructure..."
+                        terraform apply -auto-approve
+                    '''
                 }
             }
         }
@@ -95,8 +120,6 @@ pipeline {
                 }
             }
         }
-
-        
 
         stage('Build and Push Frontend Image') {
             steps {
