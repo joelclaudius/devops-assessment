@@ -64,6 +64,10 @@ pipeline {
                             echo "DB_USER=${DB_USER}"
                             echo "AWS_REGION=${AWS_REGION}"
                             echo "BACKEND_ECR_URL=${BACKEND_ECR_URL}"
+                            echo "BACKEND_ECR_URL: ${BACKEND_ECR_URL}"
+                            echo "IMAGE_TAG: ${IMAGE_TAG}"
+                            echo "COMMIT_SHA: ${COMMIT_SHA}"
+
                             DOCKER_BUILDKIT=1 docker build \
                                 --build-arg SECRET_KEY="${SECRET_KEY}" \
                                 --build-arg AWS_REGION="${AWS_REGION}" \
