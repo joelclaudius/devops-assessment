@@ -76,7 +76,8 @@ pipeline {
                                 --build-arg AWS_REGION="${AWS_REGION}" \
                                 --build-arg DB_PASSWORD="${DB_PASSWORD}" \
                                 --build-arg DB_USER="${DB_USER}" \
-                                --build -arg DATABASE_URL="${DATABASE_URL}" \
+                                --build-arg DATABASE_URL="${DATABASE_URL}" \
+                                --build-arg DJANGO_SETTINGS_MODULE="${DJANGO_SETTINGS_MODULE}" \
                                 --build-arg DB_NAME="${DB_NAME}" \
                                 --build-arg DB_HOST="${DB_HOST}" \
                                 --build-arg AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
