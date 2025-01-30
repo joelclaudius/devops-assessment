@@ -56,8 +56,9 @@ resource "aws_eip" "nat_eip" {
 
 resource "aws_nat_gateway" "nat_gateway" {
   allocation_id = aws_eip.nat_eip.id
-  subnet_id     = aws_subnet.frontend_subnet.id  # Use public subnet
+  subnet_id     = aws_subnet.frontend_subnet.id  # Ensure this is a public subnet
 }
+
 
 
 
@@ -153,14 +154,31 @@ resource "aws_security_group" "frontend_sg" {
   description = "Frontend security group"
   vpc_id      = aws_vpc.main_vpc.id
 
-  # Allow outbound internet access for ECR
-  egress {
+  # Allow incoming traffic on port 80 (HTTP)
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]  # Open to the world (modify as needed)
+  }
+
+  # Allow incoming traffic on port 443 (HTTPS)
+  ingress {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]  # Open to the world (modify as needed)
+  }
+
+  # Allow outbound internet access for ECR & other services
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
 
 
 resource "aws_security_group" "database_sg" {
@@ -304,6 +322,22 @@ resource "aws_vpc_endpoint" "secrets_manager" {
   private_dns_enabled = true
 }
 
+resource "aws_vpc_endpoint" "ecr_api" {
+  vpc_id       = aws_vpc.main_vpc.id
+  service_name = "com.amazonaws.us-east-1.ecr.api"
+  vpc_endpoint_type = "Interface"
+  subnet_ids   = [aws_subnet.backend_subnet.id, aws_subnet.database_subnet.id]
+  security_group_ids = [aws_security_group.backend_sg.id]
+}
+
+resource "aws_vpc_endpoint" "ecr_dkr" {
+  vpc_id       = aws_vpc.main_vpc.id
+  service_name = "com.amazonaws.us-east-1.ecr.dkr"
+  vpc_endpoint_type = "Interface"
+  subnet_ids   = [aws_subnet.backend_subnet.id, aws_subnet.database_subnet.id]
+  security_group_ids = [aws_security_group.backend_sg.id]
+}
+
 
 # ECS Execution Role
 resource "aws_iam_role" "ecs_execution_role" {
@@ -338,6 +372,16 @@ resource "aws_iam_policy" "ecs_execution_role_policy" {
         ],
         Resource = "*"
       },
+
+      {
+        Effect = "Allow",
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ],
+        Resource = "arn:aws:logs:${var.aws_region}:${var.account_id}:log-group:/ecs/*"
+      },
+
       {
         Effect = "Allow",
         Action = [
@@ -349,9 +393,10 @@ resource "aws_iam_policy" "ecs_execution_role_policy" {
       {
         Effect = "Allow",
         Action = [
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:BatchGetImage",
-          "ecr:BatchCheckLayerAvailability"
+            "ecr:GetAuthorizationToken",
+            "ecr:BatchCheckLayerAvailability",
+            "ecr:GetDownloadUrlForLayer",
+            "ecr:BatchGetImage"
         ],
         Resource = "*"
       },
@@ -393,34 +438,26 @@ resource "aws_ecs_task_definition" "backend_task" {
       "memory": 512,
       "cpu": 256,
       "essential": true,
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "${aws_cloudwatch_log_group.ecs_log_group.name}",
+          "awslogs-region": "${var.aws_region}",
+          "awslogs-stream-prefix": "backend"
+        }
+      },
       "secrets": [
         {
           "name": "DB_HOST",
-          "valueFrom": "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:my-app/db-credentials"
-        },
-        {
-          "name": "POSTGRES_USER",
-          "valueFrom": "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:my-app/db-credentials"
-        },
-        {
-          "name": "POSTGRES_PASSWORD",
-          "valueFrom": "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:my-app/db-credentials"
-        },
-        {
-          "name": "SECRET_KEY",
-          "valueFrom": "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:my-app/db-credentials"
-        },
-        {
-          "name": "AWS_REGION",
-          "valueFrom": "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:my-app/db-credentials"
+          "valueFrom": "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:my-app/db-credentials::DB_HOST::"
         },
         {
           "name": "DATABASE_URL",
-          "valueFrom": "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:my-app/db-credentials"
+          "valueFrom": "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:my-app/db-credentials:DATABASE_URL::"
         },
         {
           "name": "DJANGO_SETTINGS_MODULE",
-          "valueFrom": "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:my-app/db-credentials"
+          "valueFrom": "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:my-app/db-credentials:DJANGO_SETTINGS_MODULE::"
         }
       ]
     }
@@ -444,6 +481,15 @@ resource "aws_ecs_task_definition" "frontend_task" {
       "memory": 512,
       "cpu": 256,
       "essential": true,
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "${aws_cloudwatch_log_group.ecs_log_group.name}",
+          "awslogs-region": "${var.aws_region}",
+          "awslogs-stream-prefix": "frontend"
+        }
+      },
+
       "portMappings": [
         {
           "containerPort": 80,
@@ -469,35 +515,41 @@ resource "aws_ecs_task_definition" "database_task" {
   network_mode             = "awsvpc"
   cpu                      = "256"
   memory                   = "512"
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn  # Add this line
+  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
 
-
-  container_definitions = <<EOF
-  [
+  container_definitions = jsonencode([
     {
-      "name": "database",
-      "image": "${aws_ecr_repository.database_ecr_repo.repository_url}:latest",
-      "memory": 512,
-      "cpu": 256,
-      "essential": true,
-      "secrets": [
+      name      = "database"
+      image     = "${aws_ecr_repository.database_ecr_repo.repository_url}:latest"
+      memory    = 512
+      cpu       = 256
+      essential = true
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "${aws_cloudwatch_log_group.ecs_log_group.name}"
+          awslogs-region        = "${var.aws_region}"
+          awslogs-stream-prefix = "database"
+        }
+      }
+      secrets = [
         {
-          "name": "POSTGRES_DB",
-          "valueFrom": "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:my-app/db-credentials"
+          name      = "POSTGRES_DB"
+          valueFrom = "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:my-app/db-credentials:POSTGRES_DB::"
         },
         {
-          "name": "POSTGRES_USER",
-          "valueFrom": "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:my-app/db-credentials"
+          name      = "POSTGRES_USER"
+          valueFrom = "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:my-app/db-credentials:POSTGRES_USER::"
         },
         {
-          "name": "POSTGRES_PASSWORD",
-          "valueFrom": "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:my-app/db-credentials"
+          name      = "POSTGRES_PASSWORD"
+          valueFrom = "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:my-app/db-credentials:POSTGRES_PASSWORD::"
         }
       ]
     }
-  ]
-  EOF
+  ])
 }
+
 
 # Create a private DNS namespace for service discovery
 resource "aws_service_discovery_private_dns_namespace" "my_namespace" {
@@ -644,3 +696,10 @@ resource "aws_lb_listener" "frontend_listener" {
     target_group_arn = aws_lb_target_group.frontend_target_group.arn
   }
 }
+
+resource "aws_cloudwatch_log_group" "ecs_log_group" {
+  name              = "/ecs/ecs-app-logs"
+  retention_in_days = 7  # Adjust the retention period as needed
+}
+
+

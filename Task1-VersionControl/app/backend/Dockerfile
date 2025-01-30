@@ -11,19 +11,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Create virtual environment
+RUN python -m venv /app/venv
 
-# Install Gunicorn
-RUN pip install gunicorn
+# Activate venv before installing dependencies
+RUN /app/venv/bin/pip install --no-cache-dir --upgrade pip \
+    && /app/venv/bin/pip install --no-cache-dir -r requirements.txt \
+    && /app/venv/bin/pip install gunicorn
 
 # Copy application code
 COPY . .
 
+# Ensure Gunicorn script is executable
+RUN chmod +x gunicorn_start.sh
+
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
-ENV DJANGO_SETTINGS_MODULE=backend.settings.dev
+ENV PATH="/app/venv/bin:$PATH"
+ENV DJANGO_SETTINGS_MODULE=backend.settings.prod
 
 # Expose the port used by Gunicorn
 EXPOSE 8000
