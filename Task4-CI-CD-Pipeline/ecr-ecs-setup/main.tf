@@ -54,11 +54,21 @@ resource "aws_eip" "nat_eip" {
   domain = "vpc"
 }
 
-resource "aws_nat_gateway" "nat_gateway" {
-  allocation_id = aws_eip.nat_eip.id
-  subnet_id     = aws_subnet.frontend_subnet.id  # Ensure this is a public subnet
+
+resource "aws_eip" "nat_eip_b" {
+  domain = "vpc"
 }
 
+
+resource "aws_nat_gateway" "nat_gateway" {
+  allocation_id = aws_eip.nat_eip.id
+  subnet_id    = aws_subnet.frontend_subnet.id # Ensure this is a public subnet
+}
+
+resource "aws_nat_gateway" "nat_gateway_b" {
+  allocation_id = aws_eip.nat_eip_b.id
+  subnet_id     = aws_subnet.frontend_subnet_b.id
+}
 
 
 
@@ -89,10 +99,16 @@ resource "aws_route_table" "public_route_table" {
 
 
 # Associate Public Route Table with Frontend Subnet
-resource "aws_route_table_association" "frontend_association" {
+resource "aws_route_table_association" "frontend_association_a" {
   subnet_id      = aws_subnet.frontend_subnet.id
   route_table_id = aws_route_table.public_route_table.id
 }
+
+resource "aws_route_table_association" "frontend_association_b" {
+  subnet_id      = aws_subnet.frontend_subnet_b.id
+  route_table_id = aws_route_table.public_route_table.id
+}
+
 
 
 resource "aws_route_table" "private_route_table" {
@@ -588,10 +604,11 @@ resource "aws_ecs_service" "frontend_service" {
   launch_type     = "FARGATE"
   desired_count   = 1
 
-  network_configuration {
-  subnets          = [aws_subnet.frontend_subnet.id]
+network_configuration {
+  subnets          = [aws_subnet.frontend_subnet.id, aws_subnet.frontend_subnet_b.id]
   security_groups  = [aws_security_group.frontend_sg.id]
-  }
+}
+
 
   load_balancer {
     target_group_arn = aws_lb_target_group.frontend_target_group.arn
@@ -697,6 +714,7 @@ resource "aws_lb_listener" "frontend_listener" {
     target_group_arn = aws_lb_target_group.frontend_target_group.arn
   }
 }
+
 
 resource "aws_cloudwatch_log_group" "ecs_log_group" {
   name              = "/ecs/ecs-app-logs"
