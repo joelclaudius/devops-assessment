@@ -1,4 +1,3 @@
-# Backend Dockerfile
 FROM python:3.11-slim
 
 # Set work directory
@@ -14,9 +13,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Create virtual environment
 RUN python -m venv /app/venv
 
-# Activate venv before installing dependencies
-RUN /app/venv/bin/pip install --no-cache-dir --upgrade pip \
-    && /app/venv/bin/pip install --no-cache-dir -r requirements.txt \
+# Ensure pip is up-to-date
+RUN /app/venv/bin/pip install --no-cache-dir --upgrade pip
+
+# Copy only requirements file first to leverage Docker layer caching
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN /app/venv/bin/pip install --no-cache-dir -r requirements.txt \
     && /app/venv/bin/pip install gunicorn
 
 # Copy application code
