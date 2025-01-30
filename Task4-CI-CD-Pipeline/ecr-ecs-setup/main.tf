@@ -434,8 +434,7 @@ resource "aws_ecs_task_definition" "frontend_task" {
   network_mode             = "awsvpc"
   cpu                      = "256"
   memory                   = "512"
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn  # Add this line
-
+  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
 
   container_definitions = <<EOF
   [
@@ -444,11 +443,25 @@ resource "aws_ecs_task_definition" "frontend_task" {
       "image": "${aws_ecr_repository.frontend_ecr_repo.repository_url}:latest",
       "memory": 512,
       "cpu": 256,
-      "essential": true
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "hostPort": 80,
+          "protocol": "tcp"
+        }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3
+      }
     }
   ]
   EOF
 }
+
 
 resource "aws_ecs_task_definition" "database_task" {
   family                   = "database-task"
@@ -486,20 +499,58 @@ resource "aws_ecs_task_definition" "database_task" {
   EOF
 }
 
+# Create a private DNS namespace for service discovery
+resource "aws_service_discovery_private_dns_namespace" "my_namespace" {
+  name = "my-namespace.local"  # Change this if needed
+  vpc  = aws_vpc.main_vpc.id
+}
+
+
+
+resource "aws_service_discovery_service" "backend_service_discovery" {
+  name = "backend"
+
+  dns_config {
+    namespace_id = aws_service_discovery_private_dns_namespace.my_namespace.id
+
+    dns_records {
+      type = "A"
+      ttl  = 10
+    }
+
+    routing_policy = "MULTIVALUE"
+  }
+
+  health_check_custom_config {
+    failure_threshold = 1
+  }
+}
+
+
 # ECS Services
 resource "aws_ecs_service" "frontend_service" {
   name            = "frontend-service"
   cluster         = aws_ecs_cluster.ecs_cluster.id
   task_definition = aws_ecs_task_definition.frontend_task.arn
-  desired_count   = 1
   launch_type     = "FARGATE"
+  desired_count   = 1
 
   network_configuration {
-    subnets          = [aws_subnet.frontend_subnet.id]  # Public subnet
-    security_groups  = [aws_security_group.frontend_sg.id]
-    assign_public_ip = true
+  subnets          = [aws_subnet.frontend_subnet.id]
+  security_groups  = [aws_security_group.frontend_sg.id]
   }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.frontend_target_group.arn
+    container_name   = "frontend"
+    container_port   = 80
+  }
+
+  depends_on = [aws_lb_listener.frontend_listener]  # Ensure listener is created first
 }
+
+
+
 
 
 # ECS Service (Backend)
@@ -515,6 +566,11 @@ resource "aws_ecs_service" "backend_service" {
     security_groups  = [aws_security_group.backend_sg.id]
     assign_public_ip = false
   }
+
+  service_registries {
+    registry_arn = aws_service_discovery_service.backend_service_discovery.arn
+  }
+
 }
 
 # ECS Service (Database)
@@ -538,39 +594,44 @@ resource "aws_lb" "frontend_alb" {
   name               = "frontend-alb"
   internal           = false
   load_balancer_type = "application"
-  security_groups   = [aws_security_group.frontend_sg.id]
+  security_groups    = [aws_security_group.frontend_sg.id]
   subnets            = [
-    aws_subnet.frontend_subnet.id,  # Use the subnet in AZ1
-    aws_subnet.frontend_subnet_b.id   # Use the subnet in AZ2
+    aws_subnet.frontend_subnet.id,
+    aws_subnet.frontend_subnet_b.id
   ]
 
   enable_deletion_protection = false
   enable_cross_zone_load_balancing = true
 
-  idle_timeout = 60  # Correct way to define idle timeout
-
+  idle_timeout = 60
 
   tags = {
     Name = "frontend-alb"
   }
 }
 
+
 # Create a target group for the frontend service
 resource "aws_lb_target_group" "frontend_target_group" {
-  name     = "frontend-target-group"
-  port     = 80
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.main_vpc.id
+  name        = "frontend-target-group"
+  port        = 80
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main_vpc.id
+  target_type = "ip"  # Ensure compatibility with ECS Fargate (awsvpc mode)
 
   health_check {
-    path = "/health"
-    interval = 30
+    path                = "/health"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
   }
 
   tags = {
     Name = "frontend-target-group"
   }
 }
+
 
 # Listener for the ALB
 resource "aws_lb_listener" "frontend_listener" {
@@ -579,18 +640,7 @@ resource "aws_lb_listener" "frontend_listener" {
   protocol          = "HTTP"
 
   default_action {
-    type             = "fixed-response"
-    fixed_response {
-      status_code = 200
-      content_type = "text/plain"
-      message_body = "Welcome to the frontend!"
-    }
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.frontend_target_group.arn
   }
-}
-
-# Attach ECS frontend service to the ALB target group
-resource "aws_lb_target_group_attachment" "frontend_service_attachment" {
-  target_group_arn = aws_lb_target_group.frontend_target_group.arn
-  target_id        = aws_ecs_service.frontend_service.id
-  port             = 80
 }
