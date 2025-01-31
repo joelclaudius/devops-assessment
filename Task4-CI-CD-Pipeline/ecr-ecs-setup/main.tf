@@ -188,11 +188,12 @@ resource "aws_security_group" "frontend_sg" {
 
   # Allow outbound internet access for ECR & other services
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
 }
 
 
@@ -498,6 +499,7 @@ resource "aws_ecs_task_definition" "frontend_task" {
       "memory": 512,
       "cpu": 256,
       "essential": true,
+
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
@@ -510,20 +512,22 @@ resource "aws_ecs_task_definition" "frontend_task" {
       "portMappings": [
         {
           "containerPort": 80,
-          "hostPort": 80,
           "protocol": "tcp"
         }
       ],
+
       "healthCheck": {
-        "command": ["CMD-SHELL", "curl -f http://localhost/health || exit 1"],
+        "command": ["CMD-SHELL", "curl -f http://localhost || exit 1"],
         "interval": 30,
-        "timeout": 5,
-        "retries": 3
+        "timeout": 10,
+        "retries": 3,
+        "startPeriod": 10
       }
     }
   ]
   EOF
 }
+
 
 
 resource "aws_ecs_task_definition" "database_task" {
@@ -607,6 +611,8 @@ resource "aws_ecs_service" "frontend_service" {
 network_configuration {
   subnets          = [aws_subnet.frontend_subnet.id, aws_subnet.frontend_subnet_b.id]
   security_groups  = [aws_security_group.frontend_sg.id]
+  assign_public_ip = true
+
 }
 
 
