@@ -647,7 +647,11 @@ resource "aws_ecs_service" "backend_service" {
     registry_arn = aws_service_discovery_service.backend_service_discovery.arn
   }
 
+  depends_on = [
+    aws_ecs_service.database_service  # Ensure the database service is available first
+  ]
 }
+
 
 # ECS Service (Database)
 resource "aws_ecs_service" "database_service" {
