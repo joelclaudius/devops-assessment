@@ -203,6 +203,15 @@ resource "aws_security_group" "database_sg" {
   description = "database security group"
   vpc_id      = aws_vpc.main_vpc.id
 
+
+  # Allow inbound traffic from backend (Postgres)
+  ingress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    security_groups = [aws_security_group.backend_sg.id]  # Allow from backend SG
+  }
+
   # Allow outbound internet access for ECR
   egress {
     from_port   = 443
@@ -464,11 +473,15 @@ resource "aws_ecs_task_definition" "backend_task" {
           "awslogs-stream-prefix": "backend"
         }
       },
-      "secrets": [
+      "environment": [
         {
           "name": "DB_HOST",
-          "valueFrom": "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:my-app/db-credentials:DB_HOST::"
-        },
+          "value": "database.my_namespace.local"
+
+        }
+      ],
+      "secrets": [
+
         {
           "name": "DATABASE_URL",
           "valueFrom": "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:my-app/db-credentials:DATABASE_URL::"
@@ -585,6 +598,28 @@ resource "aws_service_discovery_service" "backend_service_discovery" {
 
   dns_config {
     namespace_id = aws_service_discovery_private_dns_namespace.my_namespace.id
+    
+
+    dns_records {
+      type = "A"
+      ttl  = 10
+    }
+
+    routing_policy = "MULTIVALUE"
+  }
+
+  health_check_custom_config {
+    failure_threshold = 1
+  }
+}
+
+
+resource "aws_service_discovery_service" "database_service_discovery" {
+  name = "database"
+
+  dns_config {
+    namespace_id = aws_service_discovery_private_dns_namespace.my_namespace.id
+    
 
     dns_records {
       type = "A"
@@ -665,6 +700,10 @@ resource "aws_ecs_service" "database_service" {
     subnets          = [aws_subnet.database_subnet.id]
     security_groups  = [aws_security_group.database_sg.id]
     assign_public_ip = false
+  }
+
+  service_registries {
+    registry_arn = aws_service_discovery_service.database_service_discovery.arn
   }
 }
 
