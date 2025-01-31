@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "ecs"
+    ec2_sd_configs:
+      - region: "us-east-1"
+        port: 9157
+
+  - job_name: "django"
+    static_configs:
+      - targets: ["backend.my_namespace.local:8000"]
+
+  - job_name: "postgres"
+    static_configs:
+      - targets: ["database.my_namespace.local:9187"]

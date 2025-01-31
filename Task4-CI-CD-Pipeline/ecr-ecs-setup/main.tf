@@ -476,7 +476,7 @@ resource "aws_ecs_task_definition" "backend_task" {
       "environment": [
         {
           "name": "DB_HOST",
-          "value": "database.my_namespace.local"
+          "value": "10.0.3.138"
 
         }
       ],
@@ -671,6 +671,9 @@ resource "aws_ecs_service" "backend_service" {
   task_definition = aws_ecs_task_definition.backend_task.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+
+  enable_execute_command = true  # <-- Add this
+
 
   network_configuration {
     subnets          = [aws_subnet.backend_subnet.id]

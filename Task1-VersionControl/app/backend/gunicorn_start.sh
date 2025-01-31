@@ -4,7 +4,7 @@
 source /app/venv/bin/activate
 
 # Run migrations
-/app/venv/bin/python /app/manage.py make migrations
+/app/venv/bin/python /app/manage.py makemigrations
 /app/venv/bin/python /app/manage.py migrate
 
 # Start Gunicorn server
