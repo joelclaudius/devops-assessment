@@ -517,7 +517,7 @@ resource "aws_ecs_task_definition" "frontend_task" {
       ],
 
       "healthCheck": {
-        "command": ["CMD-SHELL", "curl -f http://localhost || exit 1"],
+        "command": ["CMD-SHELL", "curl -f http://localhost/health || exit 1"],
         "interval": 30,
         "timeout": 10,
         "retries": 3,
