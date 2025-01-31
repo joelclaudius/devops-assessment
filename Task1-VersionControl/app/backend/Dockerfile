@@ -8,7 +8,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     bash \
     libpq-dev \
-    netcat \
     && rm -rf /var/lib/apt/lists/*
 
 # Create virtual environment
@@ -38,5 +37,5 @@ ENV DJANGO_SETTINGS_MODULE=backend.settings.prod
 # Expose the port used by Gunicorn
 EXPOSE 8000
 
-# Wait for the database to be available, run migrations, and start Gunicorn
-CMD ["bash", "-c", "while ! nc -z ${DB_HOST} 5432; do sleep 1; done; /app/venv/bin/python manage.py migrate; /app/venv/bin/gunicorn backend.wsgi:application --bind 0.0.0.0:8000"]
+# Start Gunicorn server using the script
+CMD ["bash", "gunicorn_start.sh"]
