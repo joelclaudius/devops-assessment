@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Copy package files separately for better caching
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev  # Faster, ensures lockfile consistency
+RUN npm install
 
 COPY . . 
 RUN npm run build
